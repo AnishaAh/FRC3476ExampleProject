@@ -5,9 +5,32 @@
 
 package frc.robot;
 
+
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.networktables.*;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.subsystem.*;
+import frc.utility.Controller;
+import frc.utility.Controller.XboxButtons;
+import frc.utility.ControllerDriveInputs;
+import frc.utility.OrangeUtility;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+
+import static frc.robot.Constants.*;
+
 
 
 
@@ -23,7 +46,28 @@ public class Robot extends TimedRobot
     private static final String CUSTOM_AUTO = "My Auto";
     private String autoSelected;
     private final SendableChooser<String> chooser = new SendableChooser<>();
-    
+    final @NotNull ExecutorService deserializerExecutor = Executors.newSingleThreadExecutor();
+
+    private final SendableChooser<String> autoChooser = new SendableChooser<>();
+
+    public static final SendableChooser<String> sideChooser = new SendableChooser<>();
+
+    //Inputs
+    private final static Controller xbox = new Controller(0);
+    private final static Controller stick = new Controller(1);
+    private final static Controller buttonPanel = new Controller(2);
+
+    public static void setRumble(RumbleType type, double value) {
+        xbox.setRumble(type, value);
+    }
+
+
+    //Control loop states
+    boolean limelightTakeSnapshots = false;
+
+    // Input Control
+    private double firstPressTime = 0;
+    private double lastPressTime = 0;
     
     /**
      * This method is run when the robot is first started up and should be used for any
@@ -92,7 +136,14 @@ public class Robot extends TimedRobot
     
     /** This method is called periodically during operator control. */
     @Override
-    public void teleopPeriodic() {}
+    public void teleopPeriodic() {
+        SmartDashboard.putNumber("Match Timestamp", DriverStation.getMatchTime());
+        if (!DriverStation.isEnabled()) {
+            xbox.update();
+            stick.update();
+            buttonPanel.update();
+        }
+    }
     
     
     /** This method is called once when the robot is disabled. */
